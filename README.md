@@ -3,13 +3,12 @@
 `piping` provides a `pipe!` macro that allows you to use the pipeline operator in Rust.
 
 ```rs
-#[make_orderless(defs(a = 2))]
-fn add(a: usize, b: usize) -> usize {
-	a + b
-}
+let wrapped = orig_and_double(add(2, num)).1 as isize;
 
-// Compiles to add(2, 2) for no runtime performance hit!
-add!(b = 2); // 4
+let piped = pipe! {
+	num |> add(2, _) |> orig_and_double(_),
+	(_, doubled) |> doubled as isize,
+};
 ```
 
 ## Features
