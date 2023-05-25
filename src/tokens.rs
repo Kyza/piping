@@ -1,12 +1,13 @@
-use proc_macro2::TokenTree;
+use proc_macro2::{TokenStream as TokenStream2, TokenTree};
 
+use quote::ToTokens;
 use syn::{
 	parse::{Parse, ParseStream},
 	punctuated::Punctuated,
-	Expr, Token,
+	Token,
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PipeOperator();
 
 impl Parse for PipeOperator {
@@ -17,74 +18,65 @@ impl Parse for PipeOperator {
 		Ok(PipeOperator {})
 	}
 }
+// impl Peek for PipeOperator {
 
-#[derive(Clone)]
-pub struct PipeOperation {
-	pub mutable: bool,
-	pub left: TokenTree,
-	pub right: Expr,
+// }
+
+#[derive(Debug, Clone)]
+pub struct PipeLine {
+	pub expressions: Vec<TokenStream2>,
 }
 
-impl Parse for PipeOperation {
+impl Parse for PipeLine {
 	fn parse(input: ParseStream) -> syn::Result<Self> {
-		let mutable = {
-			if input.peek(Token![mut]) {
-				_ = input.parse::<Token![mut]>()?;
-				true
-			} else {
-				false
+		let mut expressions: Vec<TokenStream2> = vec![];
+		'expressions_loop: while !input.is_empty() {
+			// Collect all `TokenTree`s until a `|>`.
+			let mut parts = vec![];
+			'parts_loop: while !input.is_empty() {
+				// Support comma separation.
+				// Stop parsing the whole line when a comma is found.
+				if input.peek(Token![,]) {
+					// Don't forget to join the token streams first.
+					expressions.push(TokenStream2::from_iter(parts));
+					break 'expressions_loop;
+				}
+
+				// TODO: `impl Peek for PipeOperator`.
+				if input.peek(Token![|]) && input.peek2(Token![>]) {
+					_ = input.parse::<PipeOperator>()?;
+					break 'parts_loop;
+				}
+
+				let part = input.parse::<TokenTree>()?;
+				parts.push(part.to_token_stream());
 			}
-		};
+			// Join all token stream parts into one.
+			// That's an expression.
+			expressions.push(TokenStream2::from_iter(parts));
+		}
 
-		// The lefthand side can only be a TokenTree because Expr includes `|>`.
-		let left = input.parse::<TokenTree>()?;
-		_ = input.parse::<PipeOperator>()?;
-		let right = input.parse::<Expr>()?;
-
-		Ok(PipeOperation {
-			mutable,
-			left,
-			right,
-		})
+		Ok(PipeLine { expressions })
 	}
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PipeStatement {
-	pub input: TokenTree,
-	pub operations: Vec<PipeOperation>,
+	pub lines: Vec<PipeLine>,
 }
 
 impl Parse for PipeStatement {
 	fn parse(input: ParseStream) -> syn::Result<Self> {
-		let (pipe_input, has_loner) = {
-			// Fork the stream and try parsing for a loner.
-			// A loner is just a provided expression meant to be assigned to the next lefthand expression.
-			let input = input.fork();
-
-			// The pipe input falls victim to the same thing as lefthand pipe operation.
-			(input.parse::<TokenTree>()?, input.peek(Token![,]))
-		};
-
-		// Advance the normal parser.
-		if has_loner {
-			_ = input.parse::<TokenTree>()?;
-			_ = input.parse::<Token![,]>()?;
-		}
-
-		// Parse all of the pipe operations.
-		let punctuated_operations =
-			Punctuated::<PipeOperation, Token![,]>::parse_terminated(input)?;
+		// Parse all of the pipelines.
+		let punctuated_lines =
+			Punctuated::<PipeLine, Token![,]>::parse_terminated(input)?;
 
 		// Convert the Punctuated to a vector.
-		let mut operations = vec![];
-		for op in punctuated_operations {
-			operations.push(op);
+		let mut lines = vec![];
+		for op in punctuated_lines {
+			lines.push(op);
 		}
 
-		Ok(PipeStatement {
-			input: pipe_input,
-			operations,
-		})
+		Ok(PipeStatement { lines })
 	}
 }

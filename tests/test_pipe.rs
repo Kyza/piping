@@ -15,8 +15,7 @@ fn test() {
 	let wrapped = orig_and_double(add(2, num)).1 as isize;
 
 	let piped = pipe! {
-		num |> add(2, num), // `_ |> add(2, num)` compiles to the same thing.
-		added |> orig_and_double(added),
+		num |> add(2, _) |> orig_and_double(_),
 		(_, doubled) |> doubled as isize,
 	};
 

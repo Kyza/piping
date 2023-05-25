@@ -1,59 +1,78 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenTree;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::parse_macro_input;
 
-use crate::tokens::PipeStatement;
+use crate::{
+	tokens::PipeStatement,
+	utils::{replace_pipe_symbol, PIPELINE_IDENT},
+};
 
 pub fn pipe(input: TokenStream) -> TokenStream {
 	let pipes = parse_macro_input!(input as PipeStatement);
 
-	// Convert the expressions to variable assignments.
-	let mut operation_quotes: Vec<_> = vec![];
-	for (i, op) in pipes.operations.iter().enumerate() {
-		let right = op.right.clone();
+	let mut lines = vec![];
+	for (i, line) in pipes.lines.iter().enumerate() {
+		let mut expressions = vec![];
+		for (j, expression) in line.expressions.iter().enumerate() {
+			let expr = expression.clone();
 
-		if i < pipes.operations.len() - 1 {
-			// The variable name and mutability should be in the next lefthand expression.
-			let next = pipes.operations.get(i + 1).unwrap().clone();
-			let mutable = {
-				if next.mutable {
-					quote! {mut}
-				} else {
-					quote! {}
+			// Ensure the first one isn't a `_`.
+			if i == 0 && j == 0 {
+				// If it isn't a `_` then assign it to the placeholder variable.
+				if expr.to_string() != "_" {
+					let expr = replace_pipe_symbol(expr);
+
+					expressions.push(quote! {
+						let #PIPELINE_IDENT = #expr;
+					});
 				}
-			};
-			let left = next.left;
+			}
+			// If it's the start of a line that isn't the first line, it's for destructuring.
+			// This is handled below, so it can be ignored.
+			else if i > 0 && j == 0 {
+				// Do nothing...
+			}
+			// If it's the final expression, return it instead of assigning.
+			else if i == pipes.lines.len() - 1
+				&& j == line.expressions.len() - 1
+			{
+				let expr = replace_pipe_symbol(expr);
 
-			operation_quotes.push(quote! {
-				let #mutable #left = #right;
-			});
-		} else {
-			operation_quotes.push(quote! {
-				#right
-			});
-		}
-	}
+				expressions.push(quote! {
+					#expr
+				});
+			}
+			// If it's not the last line, but it's the last expression in a line, combine the destructure of the next line.
+			else if i < pipes.lines.len() - 1
+				&& j == line.expressions.len() - 1
+			{
+				let expr = replace_pipe_symbol(expr);
+				let next = pipes
+					.lines
+					.get(i + 1)
+					.expect("a pipeline is missing") // We know it exists already.
+					.expressions
+					.get(0)
+					.expect("a pipeline has no expressions");
 
-	// If the left hand side of the input is an expression, assign it with the name of the next lefthand expression.
-	let temp_input = {
-		if let TokenTree::Ident(_) = pipes.input.clone() {
-			quote! {}
-		} else {
-			let left = &pipes.operations.get(0).unwrap().left;
-			let right = pipes.input;
-			quote! {
-				let #left = #right;
+				expressions.push(quote! {
+					let #next = #expr;
+				});
+			} else {
+				let expr = replace_pipe_symbol(expr);
+
+				expressions.push(quote! {
+					let #PIPELINE_IDENT = #expr;
+				});
 			}
 		}
-	};
+		lines.push(TokenStream2::from_iter(expressions));
+	}
 
 	quote! {
 		{
-			#temp_input
-			#(
-				#operation_quotes
-			)*
+			#(#lines)*
 		}
 	}
 	.into()
