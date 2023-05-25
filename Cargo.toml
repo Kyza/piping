@@ -1,12 +1,18 @@
 [package]
 name = "piping"
+description = "Pipeline syntax in Rust. `4isize |> double(_) |> _ as usize`."
 version = "0.1.0"
 edition = "2021"
+authors = ["Kyza"]
+license = "MIT"
+repository = "https://github.com/Kyza/piping"
+readme = "./README.md"
+keywords = ["macro", "pipe", "pipeline", "operator", "proc_macro"]
+categories = ["development-tools::build-utils", "rust-patterns"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.56"
 quote = "1.0.27"
 syn = { version = "2.0.15", features = ["full"] }
