@@ -1,5 +1,5 @@
 use proc_macro2::{
-	Group, Ident, Span, TokenStream as TokenStream2, TokenTree,
+	Group, Ident, Spacing, Span, TokenStream as TokenStream2, TokenTree,
 };
 
 pub struct ConstIdent(pub &'static str);
@@ -21,6 +21,7 @@ pub const PIPELINE_IDENT: ConstIdent = ConstIdent("__pipeline_value__");
 pub fn replace_pipe_symbol(stream: TokenStream2) -> TokenStream2 {
 	let stream_iter = stream.into_iter();
 	let stream_vec: Vec<_> = stream_iter.clone().collect();
+
 	stream_iter
 		.enumerate()
 		.map(|(i, tree)| match tree {
@@ -31,7 +32,10 @@ pub fn replace_pipe_symbol(stream: TokenStream2) -> TokenStream2 {
 					// `_ =` should not be replaced.
 					let next = stream_vec.get(i + 1);
 					if let Some(TokenTree::Punct(punct)) = next {
-						if punct.to_string() == "=" {
+						if punct.to_string() == "=" &&
+							// `_ ==` should not be replaced.
+							punct.spacing() == Spacing::Alone
+						{
 							return TokenTree::Ident(ident);
 						}
 					}
