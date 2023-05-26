@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![allow(clippy::tabs_in_doc_comments)]
 
 use proc_macro::TokenStream;
