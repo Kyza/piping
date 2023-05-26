@@ -34,3 +34,13 @@ fn if_statement() {
 
 	assert_eq!(piped, wrapped);
 }
+
+#[test]
+fn escaped_underscore() {
+	pipe! {
+		4 |> {
+			let __: Vec<__> = vec![5];
+			_
+		}
+	};
+}

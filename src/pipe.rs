@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, spanned::Spanned};
 
 use crate::{
 	tokens::PipeStatement,
-	utils::{replace_pipe_symbol, PIPELINE_IDENT},
+	utils::{replace_pipe_symbol, PIPELINE_IDENT, PIPELINE_SHORT},
 };
 
 pub fn pipe(input: TokenStream) -> TokenStream {
@@ -20,7 +20,9 @@ pub fn pipe(input: TokenStream) -> TokenStream {
 			// Ensure the first one isn't a `_`.
 			if i == 0 && j == 0 {
 				// If it isn't a `_` then assign it to the placeholder variable.
-				if expr.to_string() != "_" {
+				if expr.to_string()
+					!= PIPELINE_SHORT.to_ident(Some(expr.span())).to_string()
+				{
 					let expr = replace_pipe_symbol(expr);
 
 					expressions.push(quote! {

@@ -1,48 +1,48 @@
 use proc_macro2::{
-	Group, Ident, Spacing, Span, TokenStream as TokenStream2, TokenTree,
+	Group, Ident, Span, TokenStream as TokenStream2, TokenTree,
 };
 
 pub struct ConstIdent(pub &'static str);
 
 impl ConstIdent {
-	pub fn to_ident(&self) -> Ident {
-		Ident::new(self.0, Span::call_site())
+	pub fn to_ident(&self, span: Option<Span>) -> Ident {
+		Ident::new(
+			self.0,
+			if let Some(span) = span {
+				span
+			} else {
+				Span::call_site()
+			},
+		)
 	}
 }
 
 impl quote::ToTokens for ConstIdent {
 	fn to_tokens(&self, tokens: &mut TokenStream2) {
-		self.to_ident().to_tokens(tokens)
+		self.to_ident(None).to_tokens(tokens)
 	}
 }
 
 pub const PIPELINE_IDENT: ConstIdent = ConstIdent("__pipeline_value__");
+pub const PIPELINE_SHORT: ConstIdent = ConstIdent("_");
+pub const PIPELINE_UNDERSCORE: ConstIdent = ConstIdent("__");
 
 pub fn replace_pipe_symbol(stream: TokenStream2) -> TokenStream2 {
-	let stream_iter = stream.into_iter();
-	let stream_vec: Vec<_> = stream_iter.clone().collect();
-
-	stream_iter
-		.enumerate()
-		.map(|(i, tree)| match tree {
+	stream
+		.into_iter()
+		.map(|tree| match tree {
 			TokenTree::Ident(ident) => {
-				// Only replace `_`.
-				if ident == "_" {
-					// Ensure the next token isn't `=`.
-					// `_ =` should not be replaced.
-					let next = stream_vec.get(i + 1);
-					if let Some(TokenTree::Punct(punct)) = next {
-						if punct.to_string() == "=" &&
-							// `_ ==` should not be replaced.
-							punct.spacing() == Spacing::Alone
-						{
-							return TokenTree::Ident(ident);
-						}
-					}
-					// In all other cases, `_` should be replaced.
-					// Things such as declared function args named `_` will be replaced, but args starting with `_` shouldn't be used regardless.
-					// The identifier that's used to replace `_` starts with a `_` itself, so no warnings should be produced in the generated code.
-					return TokenTree::Ident(PIPELINE_IDENT.to_ident());
+				// Only replace `_` with the PIPELINE_IDENT.
+				if ident == PIPELINE_SHORT.to_ident(None) {
+					return TokenTree::Ident(
+						PIPELINE_IDENT.to_ident(Some(ident.span())),
+					);
+				}
+				// Only replace `__` with the PIPELINE_SHORT.
+				else if ident == PIPELINE_UNDERSCORE.to_ident(None) {
+					return TokenTree::Ident(
+						PIPELINE_SHORT.to_ident(Some(ident.span())),
+					);
 				}
 				TokenTree::Ident(ident)
 			}

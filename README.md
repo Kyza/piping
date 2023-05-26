@@ -52,4 +52,6 @@ You can pass any expression in as the input.
 
 Notice that you can chain pipelines with `,`s to destructure the result of the previous pipeline.
 
+To use `_` as it is normally in Rust, use `__` instead.
+
 The macro also tries to optimize the generated code to minimize the amount of reassigning done.
