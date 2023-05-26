@@ -6,7 +6,7 @@
 let wrapped = orig_and_double(add(2, num)).1 as isize;
 
 let piped = pipe! {
-	num |> add(2, _) |> orig_and_double(_),
+	num |> add(2, __) |> orig_and_double(__),
 	(_, doubled) |> doubled as isize,
 };
 ```
@@ -35,15 +35,15 @@ fn orig_and_double(num: usize) -> (usize, usize) {
 let num = 4;
 
 let piped = pipe! {
-	num |> add(2, _) |> orig_and_double(_),
+	num |> add(2, __) |> orig_and_double(__),
 	(_, doubled) |> doubled as isize,
 };
 
 // Expands to...
 let piped = {
-	let __pipeline_value__ = num;
-	let __pipeline_value__ = add(2, __pipeline_value__);
-	let (_, doubled) = orig_and_double(__pipeline_value__);
+	let __ = num;
+	let __ = add(2, __);
+	let (_, doubled) = orig_and_double(__);
 	doubled as isize
 };
 ```
@@ -51,7 +51,5 @@ let piped = {
 You can pass any expression in as the input.
 
 Notice that you can chain pipelines with `,`s to destructure the result of the previous pipeline.
-
-To use `_` as it is normally in Rust, use `__` instead.
 
 The macro also tries to optimize the generated code to minimize the amount of reassigning done.

@@ -15,7 +15,7 @@ fn multiline() {
 	let wrapped = orig_and_double(add(2, num)).1 as isize;
 
 	let piped = pipe! {
-		num |> add(2, _) |> orig_and_double(_),
+		num |> add(2, __) |> orig_and_double(__),
 		(_, doubled) |> doubled as isize,
 	};
 
@@ -29,18 +29,18 @@ fn if_statement() {
 	let wrapped = if num == 4 { 1 } else { 0 };
 
 	let piped = pipe! {
-		num |> if _ == 4 { 1 } else { 0 }
+		num |> if __ == 4 { 1 } else { 0 }
 	};
 
 	assert_eq!(piped, wrapped);
 }
 
 #[test]
-fn escaped_underscore() {
+fn normal_underscores() {
 	pipe! {
 		4 |> {
-			let __: Vec<__> = vec![5];
-			_
+			let _: Vec<_> = vec![5];
+			__
 		}
 	};
 }

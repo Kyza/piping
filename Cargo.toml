@@ -1,7 +1,7 @@
 [package]
 name = "piping"
-description = "Pipeline syntax in Rust. `4isize |> double(_) |> _ as usize`."
-version = "0.1.4"
+description = "Pipeline syntax in Rust. `4isize |> double(__) |> __ as usize`."
+version = "1.0.0"
 edition = "2021"
 authors = ["Kyza"]
 license = "MIT"

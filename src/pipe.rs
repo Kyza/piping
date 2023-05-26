@@ -3,10 +3,9 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{parse_macro_input, spanned::Spanned};
 
-use crate::{
-	tokens::PipeStatement,
-	utils::{replace_pipe_symbol, PIPELINE_IDENT, PIPELINE_SHORT},
-};
+use crate::{tokens::PipeStatement, utils::ConstIdent};
+
+pub const PIPELINE_IDENT: ConstIdent = ConstIdent("__");
 
 pub fn pipe(input: TokenStream) -> TokenStream {
 	let pipes = parse_macro_input!(input as PipeStatement);
@@ -17,14 +16,12 @@ pub fn pipe(input: TokenStream) -> TokenStream {
 		for (j, expression) in line.expressions.iter().enumerate() {
 			let expr = expression.clone();
 
-			// Ensure the first one isn't a `_`.
+			// Ensure the first one isn't a PIPELINE_IDENT.
 			if i == 0 && j == 0 {
-				// If it isn't a `_` then assign it to the placeholder variable.
-				if expr.to_string()
-					!= PIPELINE_SHORT.to_ident(Some(expr.span())).to_string()
+				// If it isn't a PIPELINE_IDENT then assign it to the placeholder variable.
+				if PIPELINE_IDENT.to_ident(Some(expr.span()))
+					!= expr.to_string()
 				{
-					let expr = replace_pipe_symbol(expr);
-
 					expressions.push(quote! {
 						let #PIPELINE_IDENT = #expr;
 					});
@@ -39,8 +36,6 @@ pub fn pipe(input: TokenStream) -> TokenStream {
 			else if i == pipes.lines.len() - 1
 				&& j == line.expressions.len() - 1
 			{
-				let expr = replace_pipe_symbol(expr);
-
 				expressions.push(quote! {
 					#expr
 				});
@@ -49,7 +44,6 @@ pub fn pipe(input: TokenStream) -> TokenStream {
 			else if i < pipes.lines.len() - 1
 				&& j == line.expressions.len() - 1
 			{
-				let expr = replace_pipe_symbol(expr);
 				let next = pipes
 					.lines
 					.get(i + 1)
@@ -62,8 +56,6 @@ pub fn pipe(input: TokenStream) -> TokenStream {
 					let #next = #expr;
 				});
 			} else {
-				let expr = replace_pipe_symbol(expr);
-
 				expressions.push(quote! {
 					let #PIPELINE_IDENT = #expr;
 				});
